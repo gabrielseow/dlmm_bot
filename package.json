@@ -8,7 +8,10 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && node build.mjs",
     "start": "node dist/index.js",
-    "dev": "npx tsx src/index.ts"
+    "dev": "npx tsx src/index.ts",
+    "gen:api": "openapi-typescript spec/meteora-api.json -o src/generated/meteora-api.d.ts",
+    "check:api": "node scripts/check-api-drift.mjs",
+    "update:api": "node scripts/check-api-drift.mjs --write && npm run gen:api"
   },
   "keywords": [],
   "author": "",
@@ -17,11 +20,13 @@
   "devDependencies": {
     "@types/node": "^25.9.1",
     "esbuild": "^0.28.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@meteora-ag/dlmm": "^1.9.10",
-    "@solana/web3.js": "^1.98.4"
+    "@solana/web3.js": "^1.98.4",
+    "openapi-fetch": "^0.17.0"
   }
 }

@@ -1,5 +1,6 @@
 import DLMM from '@meteora-ag/dlmm'
 import { Connection, PublicKey } from '@solana/web3.js';
+import { meteoraApi } from './meteora.js';
 
 const mainnetConnection = new Connection('https://api.mainnet-beta.solana.com');
 
@@ -12,6 +13,14 @@ const activeBinPricePerToken = dlmmPool.fromPricePerLamport(
     Number(activeBin.price)
 );
 
+async function fetchPoolFees(address: string) {
+    const { data, error } = await meteoraApi.GET('/pools/{address}', {
+        params: { path: { address } },
+    });
+    if (error) throw error;
+    return data;
+}
+
 function main(): void {
     console.log("Hello World!")
     console.log(activeBinPriceLamport)
@@ -19,3 +28,11 @@ function main(): void {
 }
 
 main()
+
+const pool = await fetchPoolFees(USDC_USDT_POOL.toBase58());
+console.log(`Pool ${pool.name} fees:`);
+console.log(`  30m:  $${pool.fees['30m']}`);
+console.log(`  1h:   $${pool.fees['1h']}`);
+console.log(`  24h:  $${pool.fees['24h']}`);
+console.log(`  TVL:  $${pool.tvl}`);
+console.log(`  APR:  ${pool.apr}%`);
