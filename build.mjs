@@ -9,13 +9,22 @@ import { build } from 'esbuild';
 // The banner re-creates the CommonJS globals that bundled CJS deps expect but
 // that don't exist in an ESM output: `require`, `__filename`, `__dirname`.
 await build({
-  entryPoints: ['src/index.ts'],
+  entryPoints: [
+    'src/index.ts',
+    'src/cli/sim-backtest.ts',
+    'src/cli/sim-report.ts',
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',
   target: 'node20',
-  outfile: 'dist/index.js',
+  outdir: 'dist',
+  outbase: 'src',
   sourcemap: true,
+  // better-sqlite3 is a native N-API addon; esbuild can't bundle it. Left
+  // external so it loads from node_modules at runtime (used by the
+  // forthcoming persistence layer; safe to mark external pre-emptively).
+  external: ['better-sqlite3'],
   banner: {
     js: [
       "import { createRequire } from 'module';",
