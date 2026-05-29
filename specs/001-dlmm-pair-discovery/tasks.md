@@ -33,8 +33,8 @@ Single project extending the existing `src/`. New feature code lives in
 
 **Purpose**: Project scaffolding so the feature is runnable in one command (SC-001)
 
-- [ ] T001 Create the feature directory structure: `src/discovery/` and `tests/unit/` at repository root
-- [ ] T002 [P] Add `"screen": "tsx src/discovery/cli.ts"` and `"test": "node --import tsx --test tests/unit/*.test.ts"` scripts to `package.json` (replace the placeholder `test` script)
+- [X] T001 Create the feature directory structure: `src/discovery/` and `tests/unit/` at repository root
+- [X] T002 [P] Add `"screen": "tsx src/discovery/cli.ts"` and `"test": "node --import tsx --test tests/unit/*.test.ts"` scripts to `package.json` (replace the placeholder `test` script)
 
 ---
 
@@ -44,9 +44,9 @@ Single project extending the existing `src/`. New feature code lives in
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Define domain types and enumerations in `src/discovery/types.ts`: `MeasurementWindow`, `Indicator`, `Network`, `IneligibilityReason`, plus `PoolRow`, `ScreeningCriteria`, `CandidatePair`, `IneligiblePool`, `ScreeningResult` per data-model.md (numeric API fields preserved as "missing" when null/NaN, never coerced to 0)
-- [ ] T004 Implement configuration loader/validator in `src/discovery/config.ts`: read `SCREEN_WINDOW`, `SCREEN_INDICATOR`, `SCREEN_MIN_TVL`, `SCREEN_MIN_VOLUME`, `SCREEN_TOP_N`, `SCREEN_SORT`, `SCREEN_NETWORK`, `METEORA_BASE_URL`, `SCREEN_OUTPUT`, `SCREEN_NEW_POOL_MAX_AGE_SEC` with documented defaults; reject unknown enum / negative threshold / malformed number → produce a `ScreeningCriteria` or a validation error mapped to exit code 2 (FR-011, contracts/screener-cli.md)
-- [ ] T005 Implement the I/O edge in `src/discovery/fetch-pools.ts`: paginate `meteoraApi.GET('/pools', …)` via `page`/`page_size` (≤1000) until `current_page >= pages`, normalize each row to `PoolRow[]` (preserving missing numerics), and fail-closed by throwing on any page error or incomplete pagination — never return a partial universe as complete (FR-001, FR-012, Decision 1, Decision 6). This is the ONLY discovery module importing `src/meteora.ts`
+- [X] T003 [P] Define domain types and enumerations in `src/discovery/types.ts`: `MeasurementWindow`, `Indicator`, `Network`, `IneligibilityReason`, plus `PoolRow`, `ScreeningCriteria`, `CandidatePair`, `IneligiblePool`, `ScreeningResult` per data-model.md (numeric API fields preserved as "missing" when null/NaN, never coerced to 0)
+- [X] T004 Implement configuration loader/validator in `src/discovery/config.ts`: read `SCREEN_WINDOW`, `SCREEN_INDICATOR`, `SCREEN_MIN_TVL`, `SCREEN_MIN_VOLUME`, `SCREEN_TOP_N`, `SCREEN_SORT`, `SCREEN_NETWORK`, `METEORA_BASE_URL`, `SCREEN_OUTPUT`, `SCREEN_NEW_POOL_MAX_AGE_SEC` with documented defaults; reject unknown enum / negative threshold / malformed number → produce a `ScreeningCriteria` or a validation error mapped to exit code 2 (FR-011, contracts/screener-cli.md)
+- [X] T005 Implement the I/O edge in `src/discovery/fetch-pools.ts`: paginate `meteoraApi.GET('/pools', …)` via `page`/`page_size` (≤1000) until `current_page >= pages`, normalize each row to `PoolRow[]` (preserving missing numerics), and fail-closed by throwing on any page error or incomplete pagination — never return a partial universe as complete (FR-001, FR-012, Decision 1, Decision 6). This is the ONLY discovery module importing `src/meteora.ts`
 
 **Checkpoint**: Foundation ready — types, config, and a fail-closed pool fetch exist; user story work can begin
 
@@ -67,15 +67,15 @@ correct and ordering is right, with no code changes to run it.
 
 > Write these FIRST and ensure they FAIL before implementing the core.
 
-- [ ] T006 [P] [US1] Unit tests for indicators in `tests/unit/indicators.test.ts`: `feeToTvl`/`volumeToTvl` on normal inputs match `fees/tvl` to full precision (SC-004); zero/missing/NaN TVL never yields `Infinity`/`NaN` (SC-003); `selectWindow` extracts the correct `TimeWindowData` key and reports missing fee/volume as missing (FR-006, FR-007)
-- [ ] T007 [P] [US1] Unit tests for ranking in `tests/unit/screen.test.ts`: descending order by selected indicator; equal-ratio pools tie-break by `tvl` desc then `address` asc (Decision 5); zero/missing-TVL and missing fee/volume pools are routed to `ineligible` with the correct `IneligibilityReason`, never into `candidates` (FR-003, FR-006, FR-007)
+- [X] T006 [P] [US1] Unit tests for indicators in `tests/unit/indicators.test.ts`: `feeToTvl`/`volumeToTvl` on normal inputs match `fees/tvl` to full precision (SC-004); zero/missing/NaN TVL never yields `Infinity`/`NaN` (SC-003); `selectWindow` extracts the correct `TimeWindowData` key and reports missing fee/volume as missing (FR-006, FR-007)
+- [X] T007 [P] [US1] Unit tests for ranking in `tests/unit/screen.test.ts`: descending order by selected indicator; equal-ratio pools tie-break by `tvl` desc then `address` asc (Decision 5); zero/missing-TVL and missing fee/volume pools are routed to `ineligible` with the correct `IneligibilityReason`, never into `candidates` (FR-003, FR-006, FR-007)
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement the pure indicator functions in `src/discovery/indicators.ts`: `selectWindow(data, window)`, `feeToTvl(fees, tvl)`, `volumeToTvl(volume, tvl)` — guards run before division so results are always finite real numbers (FR-002, FR-006, FR-007, Decision 2)
-- [ ] T009 [US1] Implement eligibility + ranking in `src/discovery/screen.ts`: classify each `PoolRow` as eligible or `IneligiblePool` (missing/zero TVL, missing fee/volume), compute `CandidatePair` fields incl. `rankingScore` from `criteria.indicator` and `isNewPool` from `createdAt`/`newPoolMaxAgeSec`, then `rank()` with the deterministic comparator (selected indicator + tie-breaks) and assign 1-based `rank` (FR-003, FR-004, FR-006, FR-007, FR-009, Decision 5)
-- [ ] T010 [US1] Implement output formatting in `src/discovery/format.ts`: render a ranked human table to **stderr** (rank, pair, bin step, TVL, window fees, window volume, fee-to-TVL, volume-to-TVL, `NEW`/`*` marker) and serialize the ranked `candidates` as JSON (FR-008, contracts/screener-cli.md)
-- [ ] T011 [US1] Implement the CLI entrypoint in `src/discovery/cli.ts`: wire config → fetch-pools → screen → format; JSON to stdout (or `SCREEN_OUTPUT` later), table to stderr; exit `0` on a complete scan, `2` on invalid config (before any fetch), `3` on data-source failure with no result emitted (SC-001, SC-007, SC-008, contracts/screener-cli.md)
+- [X] T008 [US1] Implement the pure indicator functions in `src/discovery/indicators.ts`: `selectWindow(data, window)`, `feeToTvl(fees, tvl)`, `volumeToTvl(volume, tvl)` — guards run before division so results are always finite real numbers (FR-002, FR-006, FR-007, Decision 2)
+- [X] T009 [US1] Implement eligibility + ranking in `src/discovery/screen.ts`: classify each `PoolRow` as eligible or `IneligiblePool` (missing/zero TVL, missing fee/volume), compute `CandidatePair` fields incl. `rankingScore` from `criteria.indicator` and `isNewPool` from `createdAt`/`newPoolMaxAgeSec`, then `rank()` with the deterministic comparator (selected indicator + tie-breaks) and assign 1-based `rank` (FR-003, FR-004, FR-006, FR-007, FR-009, Decision 5)
+- [X] T010 [US1] Implement output formatting in `src/discovery/format.ts`: render a ranked human table to **stderr** (rank, pair, bin step, TVL, window fees, window volume, fee-to-TVL, volume-to-TVL, `NEW`/`*` marker) and serialize the ranked `candidates` as JSON (FR-008, contracts/screener-cli.md)
+- [X] T011 [US1] Implement the CLI entrypoint in `src/discovery/cli.ts`: wire config → fetch-pools → screen → format; JSON to stdout (or `SCREEN_OUTPUT` later), table to stderr; exit `0` on a complete scan, `2` on invalid config (before any fetch), `3` on data-source failure with no result emitted (SC-001, SC-007, SC-008, contracts/screener-cli.md)
 
 **Checkpoint**: `npm run screen` produces a correct descending fee-to-TVL ranking — MVP is independently functional and testable
 
@@ -93,11 +93,11 @@ reason).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T012 [P] [US2] Unit tests for threshold exclusion in `tests/unit/screen.test.ts` (append): pools with `tvl < minTvl` get reason `below_min_tvl`; pools with `volume[window] < minVolume` get reason `below_min_volume`; no sub-threshold pool ever appears in `candidates` (SC-002); changing a threshold value changes the candidate set (SC-006)
+- [X] T012 [P] [US2] Unit tests for threshold exclusion in `tests/unit/screen.test.ts` (append): pools with `tvl < minTvl` get reason `below_min_tvl`; pools with `volume[window] < minVolume` get reason `below_min_volume`; no sub-threshold pool ever appears in `candidates` (SC-002); changing a threshold value changes the candidate set (SC-006)
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Add `applyThresholds()` to `src/discovery/screen.ts` and invoke it in the eligibility pass: exclude any pool failing `minTvl` or `minVolume`, recording the first failing `IneligibilityReason` in deterministic order, so the threshold check is enforced before ranking (FR-005, SC-002)
+- [X] T013 [US2] Add `applyThresholds()` to `src/discovery/screen.ts` and invoke it in the eligibility pass: exclude any pool failing `minTvl` or `minVolume`, recording the first failing `IneligibilityReason` in deterministic order, so the threshold check is enforced before ranking (FR-005, SC-002)
 
 **Checkpoint**: Thresholds from config are enforced — US1 ranking now filtered; both stories work independently
 
@@ -116,13 +116,13 @@ computed indicators; run it twice on unchanged data and confirm identical
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T014 [P] [US3] Determinism unit test in `tests/unit/screen.test.ts` (append): screening the same `PoolRow[]` twice yields byte-identical `candidates` and `ineligible` arrays (same set, same order) ignoring `generatedAt` (FR-009, SC-005)
+- [X] T014 [P] [US3] Determinism unit test in `tests/unit/screen.test.ts` (append): screening the same `PoolRow[]` twice yields byte-identical `candidates` and `ineligible` arrays (same set, same order) ignoring `generatedAt` (FR-009, SC-005)
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Assemble the full `ScreeningResult` envelope in `src/discovery/screen.ts`/`format.ts`: `generatedAt` (ISO 8601 UTC), `criteria` (exact params used), `poolUniverseCount`, ranked `candidates` (capped at `topN` when set), `ineligible` with reasons, and `status: "complete"` emitted only on a full successful scan (FR-008, FR-012, data-model.md)
-- [ ] T016 [US3] Implement `SCREEN_OUTPUT` file writing in `src/discovery/cli.ts`/`format.ts`: write the JSON `ScreeningResult` to the configured path when set, otherwise stdout, keeping stdout clean for piping (FR-008, contracts/screener-cli.md)
-- [ ] T017 [US3] Validate the emitted JSON against `specs/001-dlmm-pair-discovery/contracts/screening-result.schema.json` (spot-check a real run's output conforms to the schema) (FR-008)
+- [X] T015 [US3] Assemble the full `ScreeningResult` envelope in `src/discovery/screen.ts`/`format.ts`: `generatedAt` (ISO 8601 UTC), `criteria` (exact params used), `poolUniverseCount`, ranked `candidates` (capped at `topN` when set), `ineligible` with reasons, and `status: "complete"` emitted only on a full successful scan (FR-008, FR-012, data-model.md)
+- [X] T016 [US3] Implement `SCREEN_OUTPUT` file writing in `src/discovery/cli.ts`/`format.ts`: write the JSON `ScreeningResult` to the configured path when set, otherwise stdout, keeping stdout clean for piping (FR-008, contracts/screener-cli.md)
+- [X] T017 [US3] Validate the emitted JSON against `specs/001-dlmm-pair-discovery/contracts/screening-result.schema.json` (spot-check a real run's output conforms to the schema) (FR-008)
 
 **Checkpoint**: All user stories independently functional; output is structured, deterministic, and file-exportable
 
@@ -132,10 +132,10 @@ computed indicators; run it twice on unchanged data and confirm identical
 
 **Purpose**: Verification and hygiene spanning all stories
 
-- [ ] T018 [P] Run `npm run typecheck` and `npm run check:api` and resolve any failures (Constitution Principles I & II)
-- [ ] T019 [P] Run the full unit suite `npm run test` and confirm all pure-core tests pass (Principle IV)
-- [ ] T020 Execute the quickstart.md validation checklist (SC-001 through SC-008), including the bad-`METEORA_BASE_URL` fail-closed check (exit 3, no JSON) and the deterministic double-run check
-- [ ] T021 [P] Document the `screen` command and its env-var surface in the project README (or `specs/001-dlmm-pair-discovery/quickstart.md` cross-link)
+- [X] T018 [P] Run `npm run typecheck` and `npm run check:api` and resolve any failures (Constitution Principles I & II)
+- [X] T019 [P] Run the full unit suite `npm run test` and confirm all pure-core tests pass (Principle IV)
+- [X] T020 Execute the quickstart.md validation checklist (SC-001 through SC-008), including the bad-`METEORA_BASE_URL` fail-closed check (exit 3, no JSON) and the deterministic double-run check
+- [X] T021 [P] Document the `screen` command and its env-var surface in the project README (or `specs/001-dlmm-pair-discovery/quickstart.md` cross-link)
 
 ---
 

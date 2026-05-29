@@ -18,6 +18,9 @@ npm run screen
 - Prints a human-readable ranked **table** to stderr.
 - Default ranking: `fee_to_tvl` over the `24h` window, descending, no thresholds.
 
+> **Piping stdout?** Run `npm run --silent screen > out.json` so npm's run banner
+> stays off stdout, or use `SCREEN_OUTPUT=<path>` (section 4) for clean file output.
+
 ## 2. Filter out dust and pick a window (US2 / FR-005)
 
 ```bash
