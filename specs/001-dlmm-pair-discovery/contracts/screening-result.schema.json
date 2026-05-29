@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dlmm-bot/specs/001-dlmm-pair-discovery/screening-result.schema.json",
+  "title": "ScreeningResult",
+  "description": "Output artifact of one DLMM pair discovery run (FR-008). Emitted only on a full, successful scan.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["generatedAt", "criteria", "poolUniverseCount", "candidates", "ineligible", "status"],
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC run timestamp. Ignored when comparing two runs for determinism."
+    },
+    "status": {
+      "const": "complete",
+      "description": "Only a full, successful scan is ever serialized. Failures emit no document."
+    },
+    "poolUniverseCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total pools fetched from the universe (completeness check)."
+    },
+    "criteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window", "indicator", "minTvl", "minVolume", "sortDirection", "network", "newPoolMaxAgeSec"],
+      "properties": {
+        "window": { "enum": ["30m", "1h", "2h", "4h", "12h", "24h"] },
+        "indicator": { "enum": ["fee_to_tvl", "volume_to_tvl"] },
+        "minTvl": { "type": "number", "minimum": 0 },
+        "minVolume": { "type": "number", "minimum": 0 },
+        "topN": { "type": ["integer", "null"], "minimum": 1 },
+        "sortDirection": { "enum": ["desc", "asc"] },
+        "network": { "enum": ["mainnet", "devnet"] },
+        "baseUrl": { "type": "string" },
+        "output": { "type": ["string", "null"] },
+        "newPoolMaxAgeSec": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "description": "Eligible pools, ranked. Length <= criteria.topN when set.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rank", "address", "name", "pair", "binStep", "tvl", "fees", "volume", "window", "feeToTvl", "volumeToTvl", "rankingScore", "isNewPool"],
+        "properties": {
+          "rank": { "type": "integer", "minimum": 1 },
+          "address": { "type": "string" },
+          "name": { "type": "string" },
+          "pair": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tokenX", "tokenY"],
+            "properties": {
+              "tokenX": { "$ref": "#/$defs/token" },
+              "tokenY": { "$ref": "#/$defs/token" }
+            }
+          },
+          "binStep": { "type": "integer" },
+          "tvl": { "type": "number", "exclusiveMinimum": 0 },
+          "fees": { "type": "number", "minimum": 0 },
+          "volume": { "type": "number", "minimum": 0 },
+          "window": { "enum": ["30m", "1h", "2h", "4h", "12h", "24h"] },
+          "feeToTvl": { "type": "number", "description": "Finite real number; never Infinity/NaN (SC-003)." },
+          "volumeToTvl": { "type": "number" },
+          "rankingScore": { "type": "number" },
+          "isNewPool": { "type": "boolean" }
+        }
+      }
+    },
+    "ineligible": {
+      "type": "array",
+      "description": "Pools excluded from ranking, each with a reason (not silently dropped).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["address", "name", "reason", "tvl"],
+        "properties": {
+          "address": { "type": "string" },
+          "name": { "type": "string" },
+          "reason": {
+            "enum": ["missing_or_zero_tvl", "missing_fee_data", "missing_volume_data", "below_min_tvl", "below_min_volume", "blacklisted"]
+          },
+          "tvl": { "type": ["number", "null"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "address", "decimals"],
+      "properties": {
+        "symbol": { "type": "string" },
+        "address": { "type": "string" },
+        "decimals": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
