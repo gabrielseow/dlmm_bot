@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dlmm-bot/specs/002/verification-outcome.schema.json",
+  "title": "VerificationOutcome",
+  "description": "Comparison of a simulated fee figure against observed real-position data (FR-008, FR-009, FR-010). null fields encode could-not-verify rather than a silent pass.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "simulatedFeesUsd", "observedFeesUsd", "absDiffUsd", "relDiff", "tolerance", "status", "note"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["historical", "live"],
+      "description": "Which reconciliation was run."
+    },
+    "simulatedFeesUsd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Simulator's fee figure for the matched configuration."
+    },
+    "observedFeesUsd": {
+      "type": ["number", "null"],
+      "description": "Ground-truth fees (allTimeFees.total). null => could_not_verify."
+    },
+    "absDiffUsd": {
+      "type": ["number", "null"],
+      "description": "|simulated - observed|. null when observed is null."
+    },
+    "relDiff": {
+      "type": ["number", "null"],
+      "description": "absDiff / max(observed, epsilon). null when observed is null."
+    },
+    "tolerance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Applied relative tolerance (SIM_TOLERANCE)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail", "could_not_verify"],
+      "description": "pass iff relDiff <= tolerance; could_not_verify if observed missing/insufficient data."
+    },
+    "note": {
+      "type": "string",
+      "description": "Human-readable direction and magnitude of any breach, or the reason verification could not be performed."
+    },
+    "position": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "The observed position reconciled against, when available.",
+      "properties": {
+        "positionAddress": { "type": "string" },
+        "binLower": { "type": "integer" },
+        "binUpper": { "type": "integer" },
+        "openedAt": { "type": ["integer", "null"] },
+        "closedAt": { "type": ["integer", "null"] },
+        "isClosed": { "type": "boolean" }
+      }
+    }
+  }
+}

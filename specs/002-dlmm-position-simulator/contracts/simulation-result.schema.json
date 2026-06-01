@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dlmm-bot/specs/002/simulation-result.schema.json",
+  "title": "SimulationResult",
+  "description": "Structured, machine-readable output of a single DLMM position simulation run (FR-013).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "config",
+    "pool",
+    "window",
+    "position",
+    "operations",
+    "fees",
+    "fidelity",
+    "status"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0.0" },
+    "generatedAt": { "type": "integer", "description": "Unix seconds (CLI shell)." },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "could_not_compute"],
+      "description": "could_not_compute => figures absent/partial by design (FR-010, SC-008)."
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["pool", "shape", "timeframe", "tolerance", "liquiditySource", "network"],
+      "properties": {
+        "pool": { "type": "string" },
+        "shape": { "type": "string", "enum": ["spot", "curve", "bid_ask"] },
+        "timeframe": { "type": "string", "enum": ["5m", "30m", "1h", "2h", "4h", "12h", "24h"] },
+        "tolerance": { "type": "number", "minimum": 0 },
+        "liquiditySource": { "type": "string", "enum": ["aggregated", "snapshot"] },
+        "network": { "type": "string" }
+      }
+    },
+    "pool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "name", "binStep", "currentPrice", "currentActiveBinId", "tokenX", "tokenY", "tvlUsd"],
+      "properties": {
+        "address": { "type": "string" },
+        "name": { "type": "string" },
+        "binStep": { "type": "integer", "exclusiveMinimum": 0 },
+        "baseFeePct": { "type": "number" },
+        "dynamicFeePct": { "type": "number" },
+        "collectFeeMode": { "type": "integer" },
+        "currentPrice": { "type": "number", "exclusiveMinimum": 0 },
+        "currentActiveBinId": { "type": "integer" },
+        "tvlUsd": { "type": "number", "minimum": 0 },
+        "tokenX": { "$ref": "#/$defs/tokenRef" },
+        "tokenY": { "$ref": "#/$defs/tokenRef" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "timeframe", "bucketCount", "complete"],
+      "properties": {
+        "start": { "type": "integer" },
+        "end": { "type": "integer" },
+        "timeframe": { "type": "string" },
+        "bucketCount": { "type": "integer", "minimum": 0 },
+        "complete": { "type": "boolean" }
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pool", "status", "binLower", "binUpper", "shape", "deposit", "binLiquidity", "unclaimedFees", "realizedFees"],
+      "properties": {
+        "pool": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "binLower": { "type": "integer" },
+        "binUpper": { "type": "integer" },
+        "shape": { "type": "string", "enum": ["spot", "curve", "bid_ask"] },
+        "deposit": { "$ref": "#/$defs/tokenAmounts" },
+        "binLiquidity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["binId", "liquidity", "amountX", "amountY"],
+            "properties": {
+              "binId": { "type": "integer" },
+              "liquidity": { "type": "number", "minimum": 0 },
+              "amountX": { "type": "number", "minimum": 0 },
+              "amountY": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "unclaimedFees": { "$ref": "#/$defs/tokenAmounts" },
+        "realizedFees": { "$ref": "#/$defs/tokenAmounts" },
+        "openedAt": { "type": ["integer", "null"] },
+        "closedAt": { "type": ["integer", "null"] }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seq", "type", "at", "stateAfter"],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 0 },
+          "type": { "type": "string", "enum": ["open", "accrue", "claim", "mark", "close"] },
+          "at": { "type": "integer" },
+          "inputs": { "type": "object" },
+          "result": { "type": "object" },
+          "stateAfter": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "unclaimedFees", "realizedFees", "earnedFees"],
+            "properties": {
+              "status": { "type": "string", "enum": ["open", "closed"] },
+              "unclaimedFees": { "$ref": "#/$defs/tokenAmounts" },
+              "realizedFees": { "$ref": "#/$defs/tokenAmounts" },
+              "earnedFees": { "$ref": "#/$defs/tokenAmounts" }
+            }
+          }
+        }
+      }
+    },
+    "fees": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["totalFees", "perBin", "bucketsCounted", "bucketsOutOfRange"],
+      "properties": {
+        "totalFees": { "$ref": "#/$defs/tokenAmounts" },
+        "bucketsCounted": { "type": "integer", "minimum": 0 },
+        "bucketsOutOfRange": { "type": "integer", "minimum": 0 },
+        "perBin": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["binId", "routedVolumeUsd", "liquidityShare", "feesUsd"],
+            "properties": {
+              "binId": { "type": "integer" },
+              "routedVolumeUsd": { "type": "number", "minimum": 0 },
+              "liquidityShare": { "type": "number", "minimum": 0, "maximum": 1 },
+              "feesUsd": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "valuation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["markPrice", "positionValueUsd", "holdValueUsd", "impermanentLossUsd", "earnedFeesUsd", "netPnlUsd"],
+      "properties": {
+        "markPrice": { "type": "number", "exclusiveMinimum": 0 },
+        "positionValueUsd": { "type": "number" },
+        "holdValueUsd": { "type": "number" },
+        "impermanentLossUsd": { "type": "number" },
+        "earnedFeesUsd": { "type": "number" },
+        "netPnlUsd": { "type": "number" }
+      }
+    },
+    "verification": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "verification-outcome.schema.json" }
+      ]
+    },
+    "fidelity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priceGranularity", "volumeBasis", "liquiditySource", "complete"],
+      "properties": {
+        "priceGranularity": { "type": "string", "enum": ["5m", "30m", "1h", "2h", "4h", "12h", "24h"] },
+        "volumeBasis": { "type": "string", "enum": ["reported_fees", "volume_times_rate"] },
+        "liquiditySource": { "type": "string", "enum": ["aggregated", "snapshot"] },
+        "liquidityCaveat": { "type": "string" },
+        "complete": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "tokenRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "symbol", "decimals", "priceUsd"],
+      "properties": {
+        "address": { "type": "string" },
+        "symbol": { "type": "string" },
+        "decimals": { "type": "integer", "minimum": 0 },
+        "priceUsd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "tokenAmounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "usd"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "usd": { "type": "number" }
+      }
+    }
+  }
+}
