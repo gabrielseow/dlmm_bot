@@ -1,8 +1,9 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
+  "include": ["src", "tests"],
   "compilerOptions": {
     // File Layout
-     "rootDir": "./src",
+     "rootDir": ".",
      "outDir": "./dist",
 
     // Environment Settings
