@@ -28,8 +28,8 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 **Purpose**: Project scaffolding and one-command invocation per SC-001/FR-014.
 
-- [ ] T001 Create the `src/simulator/` package directory and add a `"simulate": "tsx src/simulator/cli.ts"` script to `package.json` (mirrors the existing `"screen"` script).
-- [ ] T002 [P] Confirm the pinned generated types in `src/generated/meteora-api.d.ts` cover the new endpoints (`/pools/{address}/ohlcv`, `/pools/{address}/volume/history`, `/positions/{pool_address}/pnl`, `/positions/{address}/historical`) by running `npm run check:api`; reconcile the pinned spec via `npm run update:api` if any are missing (Principle II).
+- [X] T001 Create the `src/simulator/` package directory and add a `"simulate": "tsx src/simulator/cli.ts"` script to `package.json` (mirrors the existing `"screen"` script).
+- [X] T002 [P] Confirm the pinned generated types in `src/generated/meteora-api.d.ts` cover the new endpoints (`/pools/{address}/ohlcv`, `/pools/{address}/volume/history`, `/positions/{pool_address}/pnl`, `/positions/{address}/historical`) by running `npm run check:api`; reconcile the pinned spec via `npm run update:api` if any are missing (Principle II).
 
 ---
 
@@ -39,10 +39,10 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 [P] Define all domain entity types in `src/simulator/types.ts` per data-model.md: `PoolState`, `TokenRef`, `WindowTimeline`/`WindowBucket`, `Position`/`BinLiquidity`, `Operation`/`PositionSnapshot`, `FeeBreakdown`/`BinFeeContribution`, `Valuation`, `FidelityNote`, `ObservedPosition`, `VerificationOutcome`, `SimulationResult`, and the shared value types `TokenAmounts` and the injected `PoolLiquiditySource` signature. Use `T | null` for absent-vs-zero fields (FR-010).
-- [ ] T004 [P] Implement the pure bin-geometry primitives in `src/simulator/bins.ts`: `priceToBinId(price, binStep)` = `floor(ln(price)/ln(1+binStep/10_000))`, `binIdToPrice(binId, binStep)`, `rangeToBins(priceRange, binStep)` → `[L,U]`, and `distributeLiquidity(shape, deposit, [L,U], binStep)` → `BinLiquidity[]` (at minimum `spot`/uniform; `curve`/`bid_ask` where supported) — FR-001, Decision 3. No I/O, no clock, no RNG.
-- [ ] T005 Implement `SimulationConfig` load + validation in `src/simulator/config.ts` reading all `SIM_*`/`METEORA_BASE_URL` env vars from the CLI contract, with the contract's validation rules (require `SIM_POOL`; exactly one deposit form, all amounts `> 0`; `lower < upper` / `binLower ≤ binUpper`; allowed `SIM_SHAPE`/`SIM_TIMEFRAME`; `SIM_START < SIM_END`; `SIM_TOLERANCE ≥ 0`; `snapshot` requires `SIM_RPC_URL`; `SIM_VERIFY_*` requires `SIM_VERIFY_USER`). Surface failures as a distinct invalid-config error (exit 2). Depends on T003, T004.
-- [ ] T006 [P] Unit tests for bin geometry in `tests/unit/bins.test.ts`: price↔bin round-trip, `rangeToBins`, shape distribution sums to the deposit, and inverted/empty range handling (SC-005). Depends on T004.
+- [X] T003 [P] Define all domain entity types in `src/simulator/types.ts` per data-model.md: `PoolState`, `TokenRef`, `WindowTimeline`/`WindowBucket`, `Position`/`BinLiquidity`, `Operation`/`PositionSnapshot`, `FeeBreakdown`/`BinFeeContribution`, `Valuation`, `FidelityNote`, `ObservedPosition`, `VerificationOutcome`, `SimulationResult`, and the shared value types `TokenAmounts` and the injected `PoolLiquiditySource` signature. Use `T | null` for absent-vs-zero fields (FR-010).
+- [X] T004 [P] Implement the pure bin-geometry primitives in `src/simulator/bins.ts`: `priceToBinId(price, binStep)` = `floor(ln(price)/ln(1+binStep/10_000))`, `binIdToPrice(binId, binStep)`, `rangeToBins(priceRange, binStep)` → `[L,U]`, and `distributeLiquidity(shape, deposit, [L,U], binStep)` → `BinLiquidity[]` (at minimum `spot`/uniform; `curve`/`bid_ask` where supported) — FR-001, Decision 3. No I/O, no clock, no RNG.
+- [X] T005 Implement `SimulationConfig` load + validation in `src/simulator/config.ts` reading all `SIM_*`/`METEORA_BASE_URL` env vars from the CLI contract, with the contract's validation rules (require `SIM_POOL`; exactly one deposit form, all amounts `> 0`; `lower < upper` / `binLower ≤ binUpper`; allowed `SIM_SHAPE`/`SIM_TIMEFRAME`; `SIM_START < SIM_END`; `SIM_TOLERANCE ≥ 0`; `snapshot` requires `SIM_RPC_URL`; `SIM_VERIFY_*` requires `SIM_VERIFY_USER`). Surface failures as a distinct invalid-config error (exit 2). Depends on T003, T004.
+- [X] T006 [P] Unit tests for bin geometry in `tests/unit/bins.test.ts`: price↔bin round-trip, `rangeToBins`, shape distribution sums to the deposit, and inverted/empty range handling (SC-005). Depends on T004.
 
 **Checkpoint**: Types, geometry, and config validation ready — user stories can begin.
 
@@ -56,14 +56,14 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Implement the pure fee model in `src/simulator/fees.ts`: `attributeFees(timeline, positionBins, shareFn, feeRate)` summing `Σ_buckets Σ_{bin ∈ activeBins(bucket)∩[L,U]} bucketFees · volumeShareOfBin · liquidityShare` → `FeeBreakdown` with per-bin contributions, `bucketsCounted`/`bucketsOutOfRange`. Guard all divisions so no `Infinity`/`NaN`/negative fee can result; out-of-range buckets contribute zero (FR-002, FR-003, Decision 2, SC-005). Depends on T003, T004.
-- [ ] T008 [P] [US1] Implement the injected `PoolLiquiditySource` in `src/simulator/bin-liquidity.ts`: Tier A `aggregated` (default, API-only — spread pool `tvl` across the active span / operator-supplied total) and optional Tier B `snapshot` (read-only `@meteora-ag/dlmm` per-bin reserves via `SIM_RPC_URL`) behind the `PoolLiquiditySource` interface so `fees.ts` stays pure (Decision 4). Depends on T003.
-- [ ] T009 [US1] Implement the `open` and `accrue` lifecycle transitions in `src/simulator/position.ts` as pure functions over an immutable `Position`, each appending an `Operation` log entry; validate at `open` (deposit `> 0`, `L ≤ U`, non-empty range → reject otherwise) and accumulate `unclaimedFees` on `accrue` (FR-001, FR-004, Decision 5). Depends on T003, T004.
-- [ ] T010 [US1] Implement the window I/O edge in `src/simulator/fetch-window.ts`: via `src/meteora.ts`, fetch `GET /pools/{address}` (geometry/config/tokens/tvl), `GET /pools/{address}/ohlcv`, and `GET /pools/{address}/volume/history`, aligning them into a `WindowTimeline` (`buckets[]` with active-bin span from `[low,high]`, `complete` flag). Set `complete=false` on coverage gaps (FR-010). Depends on T003. Respect the 30 QPS limit (no parallel fan-out).
-- [ ] T011 [US1] Implement the pure orchestrator in `src/simulator/simulate.ts`: open → accrue over the `WindowTimeline` → assemble a `SimulationResult` (`fees` FeeBreakdown, `position`, `operations`, `window`, `pool`, `config` echo, `status`) and populate the `FidelityNote` (`priceGranularity`, `volumeBasis`, `liquiditySource`, `liquidityCaveat`, `complete`). Deterministic — no clock/RNG (FR-011, FR-013, FR-015, SC-006). Depends on T007, T008, T009.
-- [ ] T012 [US1] Implement `src/simulator/format.ts`: serialize a `SimulationResult` to JSON conforming to `contracts/simulation-result.schema.json` and render a concise human summary (fees, fidelity) to stderr (FR-013).
-- [ ] T013 [US1] Implement `src/simulator/cli.ts` wiring `config → fetch-window → simulate → format`, writing JSON to `SIM_OUTPUT` or stdout, with exit codes 0 (`ok`), 2 (invalid config), 3 (`could_not_compute` / data-source failure) per the CLI contract (SC-001, SC-008). Depends on T005, T010, T011, T012.
-- [ ] T014 [P] [US1] Unit tests for the fee model in `tests/unit/fees.test.ts`: in-range vs out-of-range attribution (FR-003), zero-volume window → zero fees, per-bin share weighting so a range capturing more price action earns more (US1 #2), and determinism over identical inputs (SC-006). Depends on T007.
+- [X] T007 [P] [US1] Implement the pure fee model in `src/simulator/fees.ts`: `attributeFees(timeline, positionBins, shareFn, feeRate)` summing `Σ_buckets Σ_{bin ∈ activeBins(bucket)∩[L,U]} bucketFees · volumeShareOfBin · liquidityShare` → `FeeBreakdown` with per-bin contributions, `bucketsCounted`/`bucketsOutOfRange`. Guard all divisions so no `Infinity`/`NaN`/negative fee can result; out-of-range buckets contribute zero (FR-002, FR-003, Decision 2, SC-005). Depends on T003, T004.
+- [X] T008 [P] [US1] Implement the injected `PoolLiquiditySource` in `src/simulator/bin-liquidity.ts`: Tier A `aggregated` (default, API-only — spread pool `tvl` across the active span / operator-supplied total) and optional Tier B `snapshot` (read-only `@meteora-ag/dlmm` per-bin reserves via `SIM_RPC_URL`) behind the `PoolLiquiditySource` interface so `fees.ts` stays pure (Decision 4). Depends on T003.
+- [X] T009 [US1] Implement the `open` and `accrue` lifecycle transitions in `src/simulator/position.ts` as pure functions over an immutable `Position`, each appending an `Operation` log entry; validate at `open` (deposit `> 0`, `L ≤ U`, non-empty range → reject otherwise) and accumulate `unclaimedFees` on `accrue` (FR-001, FR-004, Decision 5). Depends on T003, T004.
+- [X] T010 [US1] Implement the window I/O edge in `src/simulator/fetch-window.ts`: via `src/meteora.ts`, fetch `GET /pools/{address}` (geometry/config/tokens/tvl), `GET /pools/{address}/ohlcv`, and `GET /pools/{address}/volume/history`, aligning them into a `WindowTimeline` (`buckets[]` with active-bin span from `[low,high]`, `complete` flag). Set `complete=false` on coverage gaps (FR-010). Depends on T003. Respect the 30 QPS limit (no parallel fan-out).
+- [X] T011 [US1] Implement the pure orchestrator in `src/simulator/simulate.ts`: open → accrue over the `WindowTimeline` → assemble a `SimulationResult` (`fees` FeeBreakdown, `position`, `operations`, `window`, `pool`, `config` echo, `status`) and populate the `FidelityNote` (`priceGranularity`, `volumeBasis`, `liquiditySource`, `liquidityCaveat`, `complete`). Deterministic — no clock/RNG (FR-011, FR-013, FR-015, SC-006). Depends on T007, T008, T009.
+- [X] T012 [US1] Implement `src/simulator/format.ts`: serialize a `SimulationResult` to JSON conforming to `contracts/simulation-result.schema.json` and render a concise human summary (fees, fidelity) to stderr (FR-013).
+- [X] T013 [US1] Implement `src/simulator/cli.ts` wiring `config → fetch-window → simulate → format`, writing JSON to `SIM_OUTPUT` or stdout, with exit codes 0 (`ok`), 2 (invalid config), 3 (`could_not_compute` / data-source failure) per the CLI contract (SC-001, SC-008). Depends on T005, T010, T011, T012.
+- [X] T014 [P] [US1] Unit tests for the fee model in `tests/unit/fees.test.ts`: in-range vs out-of-range attribution (FR-003), zero-volume window → zero fees, per-bin share weighting so a range capturing more price action earns more (US1 #2), and determinism over identical inputs (SC-006). Depends on T007.
 
 **Checkpoint**: MVP complete — an operator can simulate and trace a position's fees in one command.
 
@@ -77,10 +77,10 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Implement the pure comparison in `src/simulator/verify.ts`: `compare(simulatedFeesUsd, observedFeesUsd, tolerance, mode)` → `VerificationOutcome` (`absDiffUsd`, `relDiff = absDiff/max(observed,ε)`, `status` = `pass` iff `relDiff ≤ tolerance`, `fail` beyond, `could_not_verify` when `observedFeesUsd` is null), with a `note` capturing breach direction/magnitude (FR-008/009/010, Decision 7). Conforms to `contracts/verification-outcome.schema.json`. Depends on T003.
-- [ ] T016 [US2] Implement the observed-position I/O edge in `src/simulator/fetch-observed.ts`: via `src/meteora.ts`, fetch `GET /positions/{pool_address}/pnl` (`allTimeFees`, `lowerBinId`/`upperBinId`, `createdAt`/`closedAt`, `isClosed`) and `GET /positions/{address}/historical` (reconstruct deposit from `add` events) → `ObservedPosition`; `observedFeesUsd = null` when unavailable (Decision 1/7). Depends on T003.
-- [ ] T017 [US2] Wire verification into `src/simulator/simulate.ts` and `src/simulator/cli.ts`: when `SIM_VERIFY_*` is set, derive the matched pool/range/deposit/`[createdAt,closedAt]` window from the `ObservedPosition` (historical mode) or recent window (live, `status=open`), run the simulation, attach the `VerificationOutcome`; a `fail`/`could_not_verify` still exits 0 (US2 #2/#3, CLI contract). Depends on T013, T015, T016.
-- [ ] T018 [P] [US2] Unit tests for verification in `tests/unit/verify.test.ts`: within-tolerance `pass`, beyond-tolerance `fail` surfaced with direction, and `could_not_verify` on missing observed data (FR-010, SC-008). Depends on T015.
+- [X] T015 [P] [US2] Implement the pure comparison in `src/simulator/verify.ts`: `compare(simulatedFeesUsd, observedFeesUsd, tolerance, mode)` → `VerificationOutcome` (`absDiffUsd`, `relDiff = absDiff/max(observed,ε)`, `status` = `pass` iff `relDiff ≤ tolerance`, `fail` beyond, `could_not_verify` when `observedFeesUsd` is null), with a `note` capturing breach direction/magnitude (FR-008/009/010, Decision 7). Conforms to `contracts/verification-outcome.schema.json`. Depends on T003.
+- [X] T016 [US2] Implement the observed-position I/O edge in `src/simulator/fetch-observed.ts`: via `src/meteora.ts`, fetch `GET /positions/{pool_address}/pnl` (`allTimeFees`, `lowerBinId`/`upperBinId`, `createdAt`/`closedAt`, `isClosed`) and `GET /positions/{address}/historical` (reconstruct deposit from `add` events) → `ObservedPosition`; `observedFeesUsd = null` when unavailable (Decision 1/7). Depends on T003.
+- [X] T017 [US2] Wire verification into `src/simulator/simulate.ts` and `src/simulator/cli.ts`: when `SIM_VERIFY_*` is set, derive the matched pool/range/deposit/`[createdAt,closedAt]` window from the `ObservedPosition` (historical mode) or recent window (live, `status=open`), run the simulation, attach the `VerificationOutcome`; a `fail`/`could_not_verify` still exits 0 (US2 #2/#3, CLI contract). Depends on T013, T015, T016.
+- [X] T018 [P] [US2] Unit tests for verification in `tests/unit/verify.test.ts`: within-tolerance `pass`, beyond-tolerance `fail` surfaced with direction, and `could_not_verify` on missing observed data (FR-010, SC-008). Depends on T015.
 
 **Checkpoint**: Fee figures are now reconcilable against real data — both P1 stories functional.
 
@@ -94,10 +94,10 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add the `claim`, `mark`, and `close` transitions to `src/simulator/position.ts`: `claim` moves `unclaimedFees → realizedFees` and zeroes unclaimed (no-op when zero); `mark(price)` is read-only valuation; `close` records returned token amounts at the closing price and sets `status=closed`/`closedAt`; `accrue`/`claim`/`close` on a closed position are rejected with a clear error. Enforce `earnedFees = realizedFees + unclaimedFees` after every op (FR-005/006, SC-009, Decision 5). Depends on T009.
-- [ ] T020 [US3] Extend `src/simulator/simulate.ts` to drive the full open→accrue→claim→mark→close sequence and emit the complete ordered `operations[]` history with per-op `stateAfter` snapshots (US3 #3, FR-013). Depends on T011, T019.
-- [ ] T021 [US3] Extend `src/simulator/format.ts` to render the operation history (timestamped open/accrue/claim/mark/close with resulting balances) in the JSON output and human summary (US3 #3). Depends on T012, T020.
-- [ ] T022 [P] [US3] Unit tests for the lifecycle in `tests/unit/position.test.ts`: claim resets unclaimed and realizes the amount, claim-with-nothing is a no-op, closed-position ops are rejected, and the `earnedFees = realizedFees + unclaimedFees` invariant holds across an open→accrue→claim→close sequence (SC-009). Depends on T019.
+- [X] T019 [US3] Add the `claim`, `mark`, and `close` transitions to `src/simulator/position.ts`: `claim` moves `unclaimedFees → realizedFees` and zeroes unclaimed (no-op when zero); `mark(price)` is read-only valuation; `close` records returned token amounts at the closing price and sets `status=closed`/`closedAt`; `accrue`/`claim`/`close` on a closed position are rejected with a clear error. Enforce `earnedFees = realizedFees + unclaimedFees` after every op (FR-005/006, SC-009, Decision 5). Depends on T009.
+- [X] T020 [US3] Extend `src/simulator/simulate.ts` to drive the full open→accrue→claim→mark→close sequence and emit the complete ordered `operations[]` history with per-op `stateAfter` snapshots (US3 #3, FR-013). Depends on T011, T019.
+- [X] T021 [US3] Extend `src/simulator/format.ts` to render the operation history (timestamped open/accrue/claim/mark/close with resulting balances) in the JSON output and human summary (US3 #3). Depends on T012, T020.
+- [X] T022 [P] [US3] Unit tests for the lifecycle in `tests/unit/position.test.ts`: claim resets unclaimed and realizes the amount, claim-with-nothing is a no-op, closed-position ops are rejected, and the `earnedFees = realizedFees + unclaimedFees` invariant holds across an open→accrue→claim→close sequence (SC-009). Depends on T019.
 
 **Checkpoint**: The complete, auditable position lifecycle is modeled.
 
@@ -111,9 +111,9 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 ### Implementation for User Story 4
 
-- [ ] T023 [P] [US4] Implement the pure valuation in `src/simulator/valuation.ts`: `positionValue(price)` from per-bin liquidity (bins below active = token_y, above = token_x, active mixed), `holdValue(price)` of the original deposit, `impermanentLossUsd = holdValue − positionValue` (0 when price flat), `netPnlUsd = earnedFeesUsd − impermanentLossUsd`, reusing `bins.ts` geometry (FR-007, Decision 6). Depends on T003, T004.
-- [ ] T024 [US4] Wire the `Valuation` block into `src/simulator/simulate.ts` (attach when valuation is requested) and render it in `src/simulator/format.ts` (FR-007, FR-013). Depends on T011, T012, T023.
-- [ ] T025 [P] [US4] Unit tests for valuation in `tests/unit/valuation.test.ts`: IL is zero when price is flat, position value matches the composition at the ending price, and `netPnl = fees − IL` (US4 #1/#2). Depends on T023.
+- [X] T023 [P] [US4] Implement the pure valuation in `src/simulator/valuation.ts`: `positionValue(price)` from per-bin liquidity (bins below active = token_y, above = token_x, active mixed), `holdValue(price)` of the original deposit, `impermanentLossUsd = holdValue − positionValue` (0 when price flat), `netPnlUsd = earnedFeesUsd − impermanentLossUsd`, reusing `bins.ts` geometry (FR-007, Decision 6). Depends on T003, T004.
+- [X] T024 [US4] Wire the `Valuation` block into `src/simulator/simulate.ts` (attach when valuation is requested) and render it in `src/simulator/format.ts` (FR-007, FR-013). Depends on T011, T012, T023.
+- [X] T025 [P] [US4] Unit tests for valuation in `tests/unit/valuation.test.ts`: IL is zero when price is flat, position value matches the composition at the ending price, and `netPnl = fees − IL` (US4 #1/#2). Depends on T023.
 
 **Checkpoint**: All four user stories independently functional.
 
@@ -123,9 +123,9 @@ Single project extending the existing `src/` layout. New code lives in `src/simu
 
 **Purpose**: Verification of the whole, type safety, and docs across all stories.
 
-- [ ] T026 [P] Run `npm run typecheck` and resolve any `strict`/`noUncheckedIndexedAccess` violations across `src/simulator/` (Principle I — no `any`/unchecked `as` in business logic).
-- [ ] T027 Run `npm test` and validate all `quickstart.md` scenarios (US1–US4) end-to-end against a real pool, confirming exit codes 0/2/3 behave per the CLI contract (SC-001, SC-005, SC-008).
-- [ ] T028 [P] Add a short `src/simulator/` usage note to the repo README/docs covering the `simulate` script, the `SIM_*` config surface, and the fidelity tiers (FR-014, FR-015).
+- [X] T026 [P] Run `npm run typecheck` and resolve any `strict`/`noUncheckedIndexedAccess` violations across `src/simulator/` (Principle I — no `any`/unchecked `as` in business logic).
+- [X] T027 Run `npm test` and validate all `quickstart.md` scenarios (US1–US4) end-to-end against a real pool, confirming exit codes 0/2/3 behave per the CLI contract (SC-001, SC-005, SC-008).
+- [X] T028 [P] Add a short `src/simulator/` usage note to the repo README/docs covering the `simulate` script, the `SIM_*` config surface, and the fidelity tiers (FR-014, FR-015).
 
 ---
 
